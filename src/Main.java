@@ -1,77 +1,55 @@
-import syntaxtree.*;
-import java.util.*;
 import javafx.util.Pair;
-import java.io.*;
+import org.antlr.v4.runtime.*;
+import org.antlr.v4.runtime.tree.*;
 
-class Main {
-    public static void main (String [] args) throws Exception{
-        FileInputStream fin = null;
-        BufferedWriter fout = null;
+import java.io.*;
+import java.util.*;
+
+public class Main {
+    public static void main(String[] args) {
         boolean displayOffsets = Arrays.asList(args).contains("--offsets");
 
-        /* for each file path given from the cmd */
-        for(String arg : args){
-            if(arg.equals("--offsets"))
+        for (String arg : args) {
+            if (arg.equals("--offsets"))
                 continue;
 
-            /* try and: open, parse and visit the syntax tree of the program */
-            try{
+            try (FileInputStream fin = new FileInputStream(arg)) {
+                CharStream input = CharStreams.fromStream(fin);
+                JavaLexer lexer = new JavaLexer(input);
+                CommonTokenStream tokens = new CommonTokenStream(lexer);
+                JavaParser parser = new JavaParser(tokens);
 
-                fin = new FileInputStream(arg);
-                MiniJavaParser parser = new MiniJavaParser(fin);
-
-                /* first, traverse the tree to get offset data for each class */
+                ParseTree tree = parser.goal();
                 FirstVisitor v0 = new FirstVisitor();
-                Goal root = parser.Goal();
-                root.accept(v0, null);
-                
-                if(displayOffsets){
+                v0.visit(tree);
+
+                if (displayOffsets) {
                     System.out.println("Offsets\n-------");
 
-                    /* For each class */
                     for (Map.Entry<String, ClassData> entry : v0.classes.entrySet()) {
                         String name = entry.getKey();
                         System.out.println("Class: " + name);
 
-                        /* For each variable of the class, print offset */
                         System.out.println("\n\tFields\n\t------\n\t\tthis: 0");
-                        for(Map.Entry<String, Pair<String, Integer>> var : entry.getValue().vars.entrySet())
+                        for (Map.Entry<String, Pair<String, Integer>> var : entry.getValue().vars.entrySet())
                             System.out.println("\t\t" + name + "." + var.getKey() + ": " + var.getValue().getValue());
 
-                        /* For each pointer to a member method, print offset */
                         System.out.println("\n\tMethods\n\t-------");
-                        for(Map.Entry<String, MethodData> func : entry.getValue().methods.entrySet())
-                            System.out.println("\t\t" + func.getValue().className + "." + func.getKey() + ": " + func.getValue().offset);                       
-                    }  
-                    
+                        for (Map.Entry<String, MethodData> func : entry.getValue().methods.entrySet())
+                            System.out.println("\t\t" + func.getValue().className + "." + func.getKey() + ": " + func.getValue().offset);
+                    }
                 }
 
-                /* generate intermediate representation code */
-                fout = new BufferedWriter(new FileWriter(arg.replace(".java", ".ll")));
-                Generatellvm v1 = new Generatellvm(fout, v0.classes, v0.messageQueue);
-                root.accept(v1);
-            }
-            /* handle exceptions */
-            catch(ParseException ex){
-                System.out.println(ex.getMessage());
-            }
-            catch(FileNotFoundException ex){
-                    System.err.println(ex.getMessage());
-            }
-
-            /* clean things up */
-            finally{
-                try{
-                    if(fin != null) fin.close();
-                    if(fout != null) fout.close();
+                try (BufferedWriter fout = new BufferedWriter(new FileWriter(arg.replace(".java", ".ll")))) {
+                    LLVMGenerator v1 = new LLVMGenerator(fout, v0.classes, v0.messageQueue);
+                    v1.visit(tree);
                 }
-                catch(IOException ex){
-                    System.err.println(ex.getMessage());
-                }
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-
         }
-        if(!displayOffsets)
+
+        if (!displayOffsets)
             System.out.println("To view field and method offsets for each class rerun with --offsets");
     }
 }
