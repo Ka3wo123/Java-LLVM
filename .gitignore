@@ -6,7 +6,6 @@ test/out/*
 src/*~ 
 src/*Parse* 
 src/*Token* 
-src/*jtb* 
-src/*CharStream*
-src/visitor 
-src/syntaxtree
+
+*.interp
+stash
