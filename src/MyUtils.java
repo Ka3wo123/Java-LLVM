@@ -43,7 +43,7 @@ public abstract class MyUtils{
     }
 
     protected static ArrayList<Pair<String, String>> getParams(String[] params){
-        ArrayList<Pair<String, String>> rv = new ArrayList<Pair<String, String>>();
+        ArrayList<Pair<String, String>> rv = new ArrayList<>();
         int splitAt;
         for(String par : params){
             splitAt = par.indexOf(':');

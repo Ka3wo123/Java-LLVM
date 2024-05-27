@@ -9,3 +9,6 @@ src/*Token*
 
 *.interp
 stash
+
+*.exe
+*.sh

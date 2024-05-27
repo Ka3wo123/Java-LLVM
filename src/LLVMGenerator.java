@@ -18,6 +18,7 @@ public class LLVMGenerator extends JavaParserBaseVisitor<String> {
         this.state = new State();
         this.messageQueue = messageQueue;
     }
+
     private String getArrayIndex(String index) {
 
         if (index.startsWith("%")) {
@@ -100,21 +101,22 @@ public class LLVMGenerator extends JavaParserBaseVisitor<String> {
         return null;
     }
 
-//    @Override
-//    public String visitMainClass(JavaParser.MainClassContext ctx) {
-//        this.className = ctx.identifier(0).accept(this);
-//        emit("define i32 @main() {");
-//
-//        if (ctx.varDeclaration(0) != null) {
-//            ctx.varDeclaration(0).accept(this);
-//        }
-//        if (ctx.statement(0) != null) {
-//            ctx.statement(0).accept(this);
-//        }
-//
-//        emit("\tret i32 0\n}\n");
-//        return null;
-//    }
+    @Override
+    public String visitMainClass(JavaParser.MainClassContext ctx) {
+        this.className = ctx.identifier(0).accept(this);
+        emit("define i32 @main() {");
+
+        if (ctx.varDeclaration(0) != null) {
+            ctx.varDeclaration(0).accept(this);
+        }
+        if (ctx.statement(0) != null) {
+            ctx.statement(0).accept(this);
+        }
+
+        emit("\tret i32 0\n}\n");
+
+        return null;
+    }
 
     @Override
     public String visitTypeDeclaration(JavaParser.TypeDeclarationContext ctx) {
@@ -126,7 +128,11 @@ public class LLVMGenerator extends JavaParserBaseVisitor<String> {
     public String visitClassDeclaration(JavaParser.ClassDeclarationContext ctx) {
         this.className = ctx.identifier().accept(this);
 
-        ctx.methodDeclaration(0).accept(this);
+        for (int i = 0; i < ctx.methodDeclaration().size(); i++) {
+            ctx.methodDeclaration(i).accept(this);
+        }
+
+//        ctx.methodDeclaration(0).accept(this);
 
         return null;
     }
@@ -134,7 +140,11 @@ public class LLVMGenerator extends JavaParserBaseVisitor<String> {
     @Override
     public String visitClassExtendsDeclaration(JavaParser.ClassExtendsDeclarationContext ctx) {
         this.className = ctx.identifier(0).accept(this);
-        ctx.methodDeclaration(0).accept(this);
+
+        for (int i = 0; i < ctx.methodDeclaration().size(); i++) {
+            ctx.methodDeclaration(i).accept(this);
+        }
+//        ctx.methodDeclaration(0).accept(this);
 
         return null;
     }
@@ -169,8 +179,15 @@ public class LLVMGenerator extends JavaParserBaseVisitor<String> {
             }
         }
 
-        ctx.varDeclaration(0).accept(this);
-        ctx.statement(0).accept(this);
+        for(int i = 0; i < ctx.expression().children.size(); i++) {
+            ctx.varDeclaration(i).accept(this);
+        }
+
+        for(int i = 0; i < ctx.statement().size(); i++) {
+            ctx.statement(i).accept(this);
+        }
+//        ctx.varDeclaration(0).accept(this);
+//        ctx.statement(0).accept(this);
 
         emit("\tret " + ctx.expression().accept(this) + "\n}\n");
         this.state.clear();
@@ -200,6 +217,7 @@ public class LLVMGenerator extends JavaParserBaseVisitor<String> {
     @Override
     public String visitArrayAssignmentStatetment(JavaParser.ArrayAssignmentStatetmentContext ctx) {
         String leftID = ctx.identifier().accept(this), leftInfo = this.getIdAddress(leftID);
+
         String index = ctx.expression(0).accept(this).split(" ")[1];
         String rightSide = ctx.expression(0).accept(this);
 
@@ -220,9 +238,18 @@ public class LLVMGenerator extends JavaParserBaseVisitor<String> {
 
         this.inIfStatement = true;
         emit("\n\t;if statement\n\tbr " + condition + " ,label %" + ifLabel[0] + ", label %" + ifLabel[1] + "\n\n" + ifLabel[0] + ":");
-        ctx.statement(0).accept(this);
+
+        for(int i = 0; i < ctx.statement().size(); i++) {
+            ctx.statement(i).accept(this);
+        }
+//        ctx.statement(0).accept(this);
         emit(brEnd + ifLabel[1] + ":");
-        ctx.statement(0).accept(this);
+
+        for(int i = 0; i < ctx.statement().size(); i++) {
+            ctx.statement(i).accept(this);
+        }
+
+//        ctx.statement(0).accept(this);
         emit(brEnd + ifLabel[2] + ":");
         this.inIfStatement = false;
 
@@ -304,7 +331,8 @@ public class LLVMGenerator extends JavaParserBaseVisitor<String> {
 
     @Override
     public String visitArrayLookup(JavaParser.ArrayLookupContext ctx) {
-        String id = ctx.primaryExpression(0).accept(this), index = ctx.primaryExpression(0).accept(this).split(" ")[1];
+        String id = ctx.primaryExpression(0).accept(this);
+        String index = ctx.primaryExpression(0).accept(this).split(" ")[1];
 
         this.checkArrayIndex(id, index, true);
 
@@ -313,31 +341,34 @@ public class LLVMGenerator extends JavaParserBaseVisitor<String> {
 
     @Override
     public String visitCompareExpression(JavaParser.CompareExpressionContext ctx) {
-        return arithmeticExpression(ctx.primaryExpression(0).accept(this), ctx.primaryExpression(1).accept(this), "icmp slt");
+        return arithmeticExpression(ctx.primaryExpression(0).accept(this), ctx.primaryExpression(0).accept(this), "icmp slt");
     }
 
     @Override
     public String visitPlusExpression(JavaParser.PlusExpressionContext ctx) {
-        return arithmeticExpression(ctx.primaryExpression(0).accept(this), ctx.primaryExpression(1).accept(this), "add");
+        return arithmeticExpression(ctx.primaryExpression(0).accept(this), ctx.primaryExpression(0).accept(this), "add");
     }
 
     @Override
     public String visitMinusExpression(JavaParser.MinusExpressionContext ctx) {
-        return arithmeticExpression(ctx.primaryExpression(0).accept(this), ctx.primaryExpression(1).accept(this), "sub");
+        return arithmeticExpression(ctx.primaryExpression(0).accept(this), ctx.primaryExpression(0).accept(this), "sub");
     }
 
     @Override
     public String visitTimesExpression(JavaParser.TimesExpressionContext ctx) {
-        return arithmeticExpression(ctx.primaryExpression(0).accept(this), ctx.primaryExpression(1).accept(this), "mul");
+        return arithmeticExpression(ctx.primaryExpression(0).accept(this), ctx.primaryExpression(0).accept(this), "mul");
     }
 
     @Override
     public String visitAndExpression(JavaParser.AndExpressionContext ctx) {
         String leftReg = ctx.clause(0).accept(this), rightReg;
         String[] labels = this.state.newLabel("and");
+
         emit("\t;short-circuit and clause, right side gets evaluated if and only if left side evaluates to true\n"
                 + "\tbr " + leftReg + ", label %" + labels[0] + ", label %" + labels[1] + "\n\n" + labels[0] + ":\n\t");
-        rightReg = ctx.clause(1).accept(this);
+
+        rightReg = ctx.clause(0).accept(this);
+
         emit("\tbr label %" + labels[2] + "\n\n" + labels[1] + ":\n\n\tbr label %" + labels[2] + "\n\n" + labels[2] + ":\n\n"
                 + "\t" + this.state.newReg() + " = phi i1 [" + rightReg.split(" ")[1] + ", %" + labels[0] + "],"
                 + "[" + leftReg.split(" ")[1] + ", %" + labels[1] + "]");
@@ -419,10 +450,10 @@ public class LLVMGenerator extends JavaParserBaseVisitor<String> {
         String size = ctx.expression().accept(this).split(" ")[1];
         emit("\n\t;allocate space for new array of size " + size + " + 1 place to store size at\n\t"
                 + this.state.newReg() + " = add i32 " + size + ", 1\n"
-                +"\t" + this.state.newReg() + " = call i8* @calloc(i32 4, i32 %_" + (this.state.getRegCounter()-2) + ")\n"
-                +"\t" + this.state.newReg() + " = bitcast i8* %_" + (this.state.getRegCounter()-2) + " to i32*\n"
-                +"\n\t;store size at index 0\n\tstore i32 " + size + ", i32* %_" + (this.state.getRegCounter()-1));
-        return "i32* %_" + (this.state.getRegCounter()-1);
+                + "\t" + this.state.newReg() + " = call i8* @calloc(i32 4, i32 %_" + (this.state.getRegCounter() - 2) + ")\n"
+                + "\t" + this.state.newReg() + " = bitcast i8* %_" + (this.state.getRegCounter() - 2) + " to i32*\n"
+                + "\n\t;store size at index 0\n\tstore i32 " + size + ", i32* %_" + (this.state.getRegCounter() - 1));
+        return "i32* %_" + (this.state.getRegCounter() - 1);
     }
 
     @Override
@@ -432,17 +463,17 @@ public class LLVMGenerator extends JavaParserBaseVisitor<String> {
         tableSize = "[" + data.methods.size() + " x i8*]";
 
         emit("\n\t;allocate space for a new \"" + className + "\" object\n\t" + this.state.newReg() + " = call i8* @calloc(i32 1, i32 " + data.size + ")"
-                +"\n\t" + this.state.newReg() + " = bitcast i8* %_" + (this.state.getRegCounter()-2) + " to i8***\n"
-                +"\t" + this.state.newReg() + " = getelementptr " + tableSize + ", " + tableSize + "* @." + className + "_vtable, i32 0, i32 0\n"
-                +"\tstore i8** %_" + (this.state.getRegCounter()-1) + ", i8*** %_" + (this.state.getRegCounter()-2));
-        return "i8* %_" + (this.state.getRegCounter()-3);
+                + "\n\t" + this.state.newReg() + " = bitcast i8* %_" + (this.state.getRegCounter() - 2) + " to i8***\n"
+                + "\t" + this.state.newReg() + " = getelementptr " + tableSize + ", " + tableSize + "* @." + className + "_vtable, i32 0, i32 0\n"
+                + "\tstore i8** %_" + (this.state.getRegCounter() - 1) + ", i8*** %_" + (this.state.getRegCounter() - 2));
+        return "i8* %_" + (this.state.getRegCounter() - 3);
     }
 
     @Override
     public String visitNotExpression(JavaParser.NotExpressionContext ctx) {
         String clause = ctx.clause().accept(this);
         emit("\n\t;apply logical not, using xor\n\t" + this.state.newReg() + " = xor " + clause + ", 1");
-        return "i1 %_" + (this.state.getRegCounter()-1);
+        return "i1 %_" + (this.state.getRegCounter() - 1);
     }
 
     @Override

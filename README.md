@@ -25,3 +25,8 @@ Helpful sources: \
 [CLANG](https://clang.llvm.org/) \
 [JAVA Oracle](https://docs.oracle.com/javase/specs/jls/se7/html/jls-2.html)
 
+opisać produkcje, ile ich jest, jak duże drzewo się tworzy zależnie jak duży program jest na wejściu
+opisać visitory i listenery i uzasadnić co wybraliśmy
+
+
+

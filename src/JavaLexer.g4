@@ -100,6 +100,7 @@ PROVIDES   : 'provides';
 WITH       : 'with';
 TRANSITIVE : 'transitive';
 
+
 // Main method
 //MAINMETHOD : PUBLIC STATIC VOID 'main' LPAREN 'String' LBRACK RBRACK IDENTIFIER RPAREN;
 MAIN : 'main';
@@ -110,6 +111,7 @@ SOUT : 'System.out.println';
 
 // length property
 LENGHT : 'lenght';
+
 // Local Variable Type Inference
 VAR: 'var'; // reserved type name
 
